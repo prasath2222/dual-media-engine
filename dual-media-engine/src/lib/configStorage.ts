@@ -41,6 +41,7 @@ export class ConfigStorageService {
         url: p.source.url || '',
         title: p.source.title || `Channel ${p.channelNumber}`,
         youtubeId: p.source.youtubeId,
+        youtubePlaylistId: p.source.youtubePlaylistId,
         fileName: p.source.fileName,
         isLive: p.source.isLive
       }

@@ -12,7 +12,7 @@ import {
   deletePreset, 
   resetPresetsToDefault
 } from '../data/presets';
-import { extractYouTubeId, detectSourceType } from '../lib/youtubeHelper';
+import { extractYouTubeId, extractYouTubePlaylistId, detectSourceType } from '../lib/youtubeHelper';
 import { YouTubeLibraryBrowser } from './YouTubeLibraryBrowser';
 import { PlaylistManager } from './PlaylistManager';
 import { CHANNEL_THEMES } from '../lib/channelThemes';
@@ -114,7 +114,8 @@ export function SourceSelectionModal({
 
     const trimmed = newPresetUrl.trim();
     const ytId = extractYouTubeId(trimmed);
-    const label = newPresetLabel.trim() || (ytId ? `YouTube Stream (${ytId})` : 'Custom Stream');
+    const playlistId = extractYouTubePlaylistId(trimmed);
+    const label = newPresetLabel.trim() || (playlistId ? `YouTube Playlist (${playlistId})` : ytId ? `YouTube Stream (${ytId})` : 'Custom Stream');
 
     const updated = saveOrUpdatePreset({
       title: label,
@@ -134,6 +135,7 @@ export function SourceSelectionModal({
         type: createdItem.type,
         url: createdItem.url,
         youtubeId: createdItem.youtubeId,
+        youtubePlaylistId: createdItem.youtubePlaylistId,
         title: createdItem.title
       });
       onClose();
@@ -192,22 +194,24 @@ export function SourceSelectionModal({
 
     const trimmed = inputUrl.trim();
     const ytId = extractYouTubeId(trimmed);
-    const title = inputTitle.trim() || (ytId ? `YouTube Video (${ytId})` : 'Custom Stream');
+    const playlistId = extractYouTubePlaylistId(trimmed);
+    const title = inputTitle.trim() || (playlistId ? `YouTube Playlist (${playlistId})` : ytId ? `YouTube Video (${ytId})` : 'Custom Stream');
 
     if (saveToPresetsFromUrlTab) {
       const updated = saveOrUpdatePreset({
         title,
         url: trimmed,
-        category: ytId ? 'YouTube' : 'Custom'
+        category: playlistId ? 'YouTube Playlist' : ytId ? 'YouTube' : 'Custom'
       });
       setPresets(updated);
     }
 
-    if (ytId) {
+    if (ytId || playlistId) {
       onSelectSource({
         type: 'youtube',
         url: trimmed,
         youtubeId: ytId,
+        youtubePlaylistId: playlistId || undefined,
         title
       });
     } else {
@@ -521,7 +525,9 @@ export function SourceSelectionModal({
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[460px] overflow-y-auto pr-1">
                   {filteredPresets.map((preset, idx) => {
-                    const isCurrent = currentSource.url === preset.url || (preset.youtubeId && currentSource.youtubeId === preset.youtubeId);
+                    const isCurrent = currentSource.url === preset.url
+                      || (preset.youtubeId && currentSource.youtubeId === preset.youtubeId)
+                      || (preset.youtubePlaylistId && currentSource.youtubePlaylistId === preset.youtubePlaylistId);
                     const isYt = preset.type === 'youtube' || preset.category.includes('YouTube');
 
                     return (
@@ -533,6 +539,7 @@ export function SourceSelectionModal({
                             type: preset.type,
                             url: preset.url,
                             youtubeId: preset.youtubeId,
+                            youtubePlaylistId: preset.youtubePlaylistId,
                             title: preset.title
                           });
                           onClose();
@@ -598,7 +605,11 @@ export function SourceSelectionModal({
                           )}
 
                           <span className="text-[10px] text-zinc-600 font-mono">
-                            {preset.youtubeId ? `ID: ${preset.youtubeId}` : preset.type.toUpperCase()}
+                            {preset.youtubePlaylistId
+                              ? `LIST: ${preset.youtubePlaylistId}`
+                              : preset.youtubeId
+                                ? `ID: ${preset.youtubeId}`
+                                : preset.type.toUpperCase()}
                           </span>
                         </div>
                       </div>
@@ -729,8 +740,11 @@ export function SourceSelectionModal({
                     onChange={(e) => {
                       setInputUrl(e.target.value);
                       if (!inputTitle && e.target.value.trim()) {
-                        const ytId = extractYouTubeId(e.target.value.trim());
-                        if (ytId) setInputTitle(`YouTube Video (${ytId})`);
+                        const nextValue = e.target.value.trim();
+                        const playlistId = extractYouTubePlaylistId(nextValue);
+                        const ytId = extractYouTubeId(nextValue);
+                        if (playlistId) setInputTitle(`YouTube Playlist (${playlistId})`);
+                        else if (ytId) setInputTitle(`YouTube Video (${ytId})`);
                       }
                     }}
                     className="w-full bg-[#0c0d14] border border-white/[0.08] rounded-xl pl-9 pr-4 py-2.5 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-white/[0.2] font-mono transition"
@@ -768,7 +782,11 @@ export function SourceSelectionModal({
                 <div className="p-3 bg-[#141520] rounded-xl border border-white/[0.06] text-xs flex items-center gap-2">
                   <span className="text-zinc-400">Detected Source Type:</span>
                   <span className="font-mono text-sky-400 font-bold uppercase">
-                    {extractYouTubeId(inputUrl) ? 'YouTube Video / Stream' : detectSourceType(inputUrl)}
+                    {extractYouTubePlaylistId(inputUrl)
+                      ? 'YouTube Playlist'
+                      : extractYouTubeId(inputUrl)
+                        ? 'YouTube Video / Stream'
+                        : detectSourceType(inputUrl)}
                   </span>
                 </div>
               )}

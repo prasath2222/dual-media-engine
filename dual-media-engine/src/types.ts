@@ -8,6 +8,7 @@ export interface SourceItem {
   fileBlobUrl?: string;
   fileName?: string;
   youtubeId?: string;
+  youtubePlaylistId?: string;
   isLive?: boolean;
 }
 
@@ -46,6 +47,7 @@ export interface SamplePreset {
   type: SourceType;
   url: string;
   youtubeId?: string;
+  youtubePlaylistId?: string;
   description: string;
   isCustom?: boolean;
   createdAt?: string;
@@ -72,6 +74,7 @@ export interface PlaylistVideoItem {
   title: string;
   url: string;
   youtubeId?: string;
+  youtubePlaylistId?: string;
   type: SourceType;
   thumbnailUrl?: string;
   channelTitle?: string;
@@ -126,4 +129,3 @@ export interface CloudSnapshot {
 }
 
 export type CloudSyncStatus = 'synced' | 'saving' | 'offline' | 'error' | 'idle';
-

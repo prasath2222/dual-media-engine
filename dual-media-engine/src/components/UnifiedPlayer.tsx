@@ -3,11 +3,11 @@ import Hls from 'hls.js';
 import * as dashjs from 'dashjs';
 import { 
   Play, Pause, Volume2, VolumeX, Maximize2, Minimize2, 
-  RotateCcw, RotateCw, AlertCircle, Loader2, Radio,
+  RotateCcw, RotateCw, AlertCircle, Loader2, Radio, SkipBack, SkipForward,
   Settings2, Gauge, Minus, Plus, X
 } from 'lucide-react';
 import { MediaSourceConfig, PlayerChannelState, ChannelColorName } from '../types';
-import { loadYouTubeIFrameApi } from '../lib/youtubeHelper';
+import { loadYouTubeIFrameApi, extractYouTubePlaylistId } from '../lib/youtubeHelper';
 import { CHANNEL_THEMES } from '../lib/channelThemes';
 
 export interface PlayerHandle {
@@ -81,7 +81,9 @@ export const UnifiedPlayer = forwardRef<PlayerHandle, UnifiedPlayerProps>(({
     notifyParent({ playbackRate: clamped });
   };
 
-  const isYouTube = source.type === 'youtube' && !!source.youtubeId;
+  const resolvedYouTubePlaylistId = source.youtubePlaylistId || extractYouTubePlaylistId(source.url);
+  const hasYouTubePlaylist = source.type === 'youtube' && !!resolvedYouTubePlaylistId;
+  const isYouTube = source.type === 'youtube' && !!(source.youtubeId || hasYouTubePlaylist);
   const isDirectOrStream = ['direct', 'local', 'hls', 'dash'].includes(source.type);
 
   // Sync state upward
@@ -227,7 +229,7 @@ export const UnifiedPlayer = forwardRef<PlayerHandle, UnifiedPlayerProps>(({
 
   // 1. YouTube Player Initializer
   useEffect(() => {
-    if (!isYouTube || !source.youtubeId) {
+    if (!isYouTube) {
       if (ytPlayerRef.current) {
         try {
           ytPlayerRef.current.destroy();
@@ -238,6 +240,9 @@ export const UnifiedPlayer = forwardRef<PlayerHandle, UnifiedPlayerProps>(({
       }
       return;
     }
+
+    const playlistId = source.youtubePlaylistId || extractYouTubePlaylistId(source.url);
+    const hasPlaylist = !!playlistId;
 
     let isMounted = true;
     setIsLoading(true);
@@ -254,7 +259,7 @@ export const UnifiedPlayer = forwardRef<PlayerHandle, UnifiedPlayerProps>(({
 
       try {
         ytPlayerRef.current = new window.YT.Player(`yt-embed-${id}`, {
-          videoId: source.youtubeId,
+          ...(source.youtubeId ? { videoId: source.youtubeId } : {}),
           width: '100%',
           height: '100%',
           playerVars: {
@@ -264,7 +269,8 @@ export const UnifiedPlayer = forwardRef<PlayerHandle, UnifiedPlayerProps>(({
             rel: 0,
             playsinline: 1,
             enablejsapi: 1,
-            origin: window.location.origin
+            origin: window.location.origin,
+            ...(hasPlaylist ? { listType: 'playlist', list: playlistId } : {})
           },
           events: {
             onReady: (event: any) => {
@@ -341,7 +347,7 @@ export const UnifiedPlayer = forwardRef<PlayerHandle, UnifiedPlayerProps>(({
         ytPlayerRef.current = null;
       }
     };
-  }, [source.youtubeId, isYouTube]);
+  }, [source.youtubeId, source.youtubePlaylistId, source.url, isYouTube]);
 
   // 2. HTML5 Video (Direct, Local File, HLS, DASH) Initializer
   useEffect(() => {
@@ -497,6 +503,23 @@ export const UnifiedPlayer = forwardRef<PlayerHandle, UnifiedPlayerProps>(({
       videoRef.current.currentTime = nextTime;
     }
     notifyParent({ currentTime: nextTime });
+  };
+  const handlePlaylistPrevious = () => {
+    if (!isYouTube || !ytPlayerRef.current || !hasYouTubePlaylist) return;
+    try {
+      ytPlayerRef.current.previousVideo();
+    } catch {
+      // ignore
+    }
+  };
+
+  const handlePlaylistNext = () => {
+    if (!isYouTube || !ytPlayerRef.current || !hasYouTubePlaylist) return;
+    try {
+      ytPlayerRef.current.nextVideo();
+    } catch {
+      // ignore
+    }
   };
 
   const toggleFullscreen = () => {
@@ -852,6 +875,25 @@ export const UnifiedPlayer = forwardRef<PlayerHandle, UnifiedPlayerProps>(({
                   className="p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.06] rounded-lg transition-all duration-150"
                 >
                   <RotateCw className="w-3.5 h-3.5" />
+                </button>
+              </>
+            )}
+
+            {hasYouTubePlaylist && (
+              <>
+                <button
+                  onClick={handlePlaylistPrevious}
+                  title="Previous video"
+                  className="p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.06] rounded-lg transition-all duration-150"
+                >
+                  <SkipBack className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={handlePlaylistNext}
+                  title="Next video"
+                  className="p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.06] rounded-lg transition-all duration-150"
+                >
+                  <SkipForward className="w-3.5 h-3.5" />
                 </button>
               </>
             )}
