@@ -1,5 +1,5 @@
 import { SamplePreset, SourceType } from '../types';
-import { extractYouTubeId, detectSourceType } from '../lib/youtubeHelper';
+import { extractYouTubeId, extractYouTubePlaylistId, detectSourceType } from '../lib/youtubeHelper';
 
 export const BUILTIN_PRESETS: SamplePreset[] = [
   {
@@ -158,11 +158,13 @@ export function saveOrUpdatePreset(preset: Partial<SamplePreset> & { title: stri
   const current = getActivePresets();
   const trimmedUrl = preset.url.trim();
   const ytId = extractYouTubeId(trimmedUrl);
-  const detectedType: SourceType = ytId ? 'youtube' : (preset.type || detectSourceType(trimmedUrl));
+  const playlistId = extractYouTubePlaylistId(trimmedUrl);
+  const detectedType: SourceType = (ytId || playlistId) ? 'youtube' : (preset.type || detectSourceType(trimmedUrl));
   
   let finalCategory = preset.category?.trim();
   if (!finalCategory) {
-    if (ytId) finalCategory = 'YouTube';
+    if (playlistId) finalCategory = 'YouTube Playlist';
+    else if (ytId) finalCategory = 'YouTube';
     else if (detectedType === 'hls') finalCategory = 'HLS (.m3u8)';
     else if (detectedType === 'dash') finalCategory = 'DASH (.mpd)';
     else if (detectedType === 'direct') finalCategory = 'Direct MP4';
@@ -180,7 +182,8 @@ export function saveOrUpdatePreset(preset: Partial<SamplePreset> & { title: stri
     type: detectedType,
     url: trimmedUrl,
     youtubeId: ytId || undefined,
-    description: preset.description?.trim() || (ytId ? `YouTube feed (${ytId})` : `${finalCategory} media stream`),
+    youtubePlaylistId: playlistId || undefined,
+    description: preset.description?.trim() || (playlistId ? `YouTube playlist (${playlistId})` : ytId ? `YouTube feed (${ytId})` : `${finalCategory} media stream`),
     isCustom: existingIdx >= 0 ? current[existingIdx].isCustom : true,
     createdAt: existingIdx >= 0 ? current[existingIdx].createdAt : new Date().toISOString()
   };

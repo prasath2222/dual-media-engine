@@ -43,12 +43,33 @@ export function extractYouTubeId(input: string): string | null {
 }
 
 /**
+ * Helper to parse YouTube playlist IDs from various URL patterns
+ */
+export function extractYouTubePlaylistId(input: string): string | null {
+  if (!input) return null;
+  const trimmed = input.trim();
+
+  try {
+    const url = new URL(trimmed.startsWith('http') ? trimmed : `https://${trimmed}`);
+    if (url.hostname.includes('youtube.com') || url.hostname.includes('youtu.be')) {
+      const listId = url.searchParams.get('list');
+      if (listId) return listId;
+    }
+  } catch {
+    // ignore
+  }
+
+  const match = trimmed.match(/[?&]list=([a-zA-Z0-9_-]+)/);
+  return match?.[1] || null;
+}
+
+/**
  * Detect media source type from URL or file
  */
 export function detectSourceType(url: string): 'youtube' | 'hls' | 'dash' | 'direct' {
   const trimmed = url.trim().toLowerCase();
 
-  if (extractYouTubeId(url)) {
+  if (extractYouTubeId(url) || extractYouTubePlaylistId(url)) {
     return 'youtube';
   }
   if (trimmed.includes('.m3u8') || trimmed.includes('application/x-mpegurl')) {
