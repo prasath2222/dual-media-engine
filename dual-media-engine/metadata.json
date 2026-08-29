@@ -1,0 +1,6 @@
+{
+  "name": "Dual Media Engine",
+  "description": "Production multi-stream broadcast mixer supporting simultaneous YouTube, HLS, DASH, and local video feeds with Google Sign-In, Cloud state synchronization, named layout snapshots, and custom playlist management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
