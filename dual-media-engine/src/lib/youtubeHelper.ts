@@ -1,6 +1,16 @@
 /**
  * Helper to parse YouTube video IDs from various URL patterns
  */
+function isTrustedYouTubeHost(hostname: string): boolean {
+  const normalized = hostname.toLowerCase();
+  return normalized === 'youtube.com'
+    || normalized.endsWith('.youtube.com')
+    || normalized === 'youtu.be'
+    || normalized.endsWith('.youtu.be')
+    || normalized === 'youtube-nocookie.com'
+    || normalized.endsWith('.youtube-nocookie.com');
+}
+
 export function extractYouTubeId(input: string): string | null {
   if (!input) return null;
   const trimmed = input.trim();
@@ -31,7 +41,7 @@ export function extractYouTubeId(input: string): string | null {
   // Fallback search param
   try {
     const url = new URL(trimmed.startsWith('http') ? trimmed : `https://${trimmed}`);
-    if (url.hostname.includes('youtube.com') && url.searchParams.get('v')) {
+    if (isTrustedYouTubeHost(url.hostname) && url.searchParams.get('v')) {
       const v = url.searchParams.get('v');
       if (v && v.length === 11) return v;
     }
@@ -51,7 +61,7 @@ export function extractYouTubePlaylistId(input: string): string | null {
 
   try {
     const url = new URL(trimmed.startsWith('http') ? trimmed : `https://${trimmed}`);
-    if (url.hostname.includes('youtube.com') || url.hostname.includes('youtu.be')) {
+    if (isTrustedYouTubeHost(url.hostname)) {
       const listId = url.searchParams.get('list');
       if (listId) return listId;
     }
